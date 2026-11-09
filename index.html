@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CEMEX GDL Rol de Turnos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+
+<header class="eco"><div class="wrap"><img alt="CEMEX" src="img/cemex-logo.png"><span class="site">Planta Guadalajara</span></div></header>
+<div class="wrap">
+  <div class="hrow">
+    <h1>Rol de Turnos</h1>
+    <div class="week"><button type="button" id="wPrev" aria-label="Semana anterior">‹</button><b id="wLbl"></b><button type="button" id="wNext" aria-label="Semana siguiente">›</button></div>
+    <span class="state prop" id="stPill">Propuesta</span>
+    <div class="hact"><button type="button" id="bXls">Descargar rol en Excel</button><button type="button" class="go" id="bApr">Aprobar rol</button><button type="button" class="primary" id="bUp" hidden>Subir a TimeBlock</button><button type="button" id="bReopen" hidden>Hacer cambios</button></div>
+  </div>
+  <div class="steps" id="steps">
+    <div class="step" data-s="1"><span class="n">1</span><div><b>Revisa la propuesta</b><div class="sub">Ya viene armada como en el Excel: cada área con su rotación y quien entra a tercer turno cubre el domingo.</div></div></div>
+    <div class="step" data-s="2"><span class="n">2</span><div><b>Marca las excepciones</b><div class="sub">Toca un día o un nombre: vacaciones, incapacidad, permiso o cambio de turno.</div></div></div>
+    <div class="step" data-s="3"><span class="n">3</span><div><b>Aprueba y envía a TimeBlock</b><div class="sub">Solo se manda lo aprobado.</div></div></div>
+  </div>
+  <nav class="tabs" role="tablist" id="tabs">
+    <button role="tab" data-t="rol" aria-selected="true">Rol de la semana</button>
+    <button role="tab" data-t="cob" aria-selected="false">Cobertura y alertas <span class="cnt" id="aCnt">0</span></button>
+    <button role="tab" data-t="tb" aria-selected="false">Enviar a TimeBlock</button>
+    <button role="tab" data-t="como" aria-selected="false">Cómo se arma</button>
+  </nav>
+</div>
+
+<main class="wrap">
+  <section id="v-rol" data-view>
+    <div style="display:grid;gap:12px">
+      <div class="bar">
+        <div class="chips" id="areaChips"></div>
+        <div class="legend" id="legend"></div>
+      </div>
+      <div id="rolBanner"></div>
+      <div class="gridwrap"><table class="g" id="grid"></table></div>
+      <p class="hint" style="margin:0">Borde punteado = propuesta calculada. Sin borde = ya estaba capturado en el Excel del rol. Punto rojo = cambio hecho aquí.</p>
+    </div>
+  </section>
+
+  <section id="v-cob" data-view hidden>
+    <div class="grid2">
+      <div class="card"><h2>Personas por turno</h2><div class="sub">Áreas que rotan · el domingo solo trabaja el tercer turno · mínimo entre paréntesis · rojo = nadie, amarillo = menos del mínimo</div><div style="overflow-x:auto" id="cov"></div></div>
+      <div class="card"><h2>Alertas</h2><ul class="alerts" id="alerts"></ul></div>
+    </div>
+  </section>
+
+  <section id="v-tb" data-view hidden>
+    <div style="display:grid;gap:14px">
+      <div id="tbBanner"></div>
+      <div class="grid2">
+        <div class="card"><h2>Cómo se traduce a TimeBlock</h2>
+          <p class="sub" style="margin:0">Según el Manual de TimeBlock: los turnos y descansos van por <b>Redefinición → Por rango → Copiar de</b>; las ausencias, por <b>Justificar</b> en el turno.</p>
+          <div class="tbl-wrap"><table class="t"><thead><tr><th>En el rol</th><th>En TimeBlock</th><th>Bot</th></tr></thead><tbody>
+            <tr><td><span class="sw k-T1">1</span></td><td>Redefinición · <span class="mono">T01 EO 07:00-15:00</span></td><td>Sí</td></tr>
+            <tr><td><span class="sw k-T2">2</span></td><td>Redefinición · <span class="mono">T02 EO 15:00-23:00</span></td><td>Sí</td></tr>
+            <tr><td><span class="sw k-T3">3</span></td><td>Redefinición · <span class="mono">T03 EO 23:00-07:00</span></td><td>Sí</td></tr>
+            <tr><td><span class="sw k-D">D</span></td><td>Redefinición · el mismo turno en versión <span class="mono">Desc</span> (p. ej. T02 EO 15:00-23:00 Desc)</td><td>Sí</td></tr>
+            <tr><td><span class="sw k-V">V</span></td><td>Justificante de turno <span class="mono">[VAC] Vacaciones</span>, por rango</td><td>Sí</td></tr>
+            <tr><td><span class="sw k-INC">INC</span></td><td><span class="mono">[ENF] Enfermedad general</span>: pide serie y folio del IMSS</td><td>A mano</td></tr>
+            <tr><td><span class="sw k-PER">PER</span></td><td><span class="mono">[PGS]</span>, <span class="mono">[PSG]</span> o <span class="mono">[PDE]</span>, según decida el coordinador</td><td>A mano</td></tr>
+            <tr><td><span class="sw k-CAP">CAP</span></td><td><span class="mono">[TCA] Tiempo de capacitación</span>: pide horas</td><td>A mano</td></tr>
+            <tr><td><span class="sw k-A">A</span></td><td>Agregado (en la mañana) · Redefinición · <span class="mono">T01 EO 07:00-15:00</span></td><td>Sí</td></tr>
+          </tbody></table></div></div>
+        <div class="card"><h2>Resumen del envío</h2><div id="tbSum" class="sub"></div>
+          <ol class="rules"><li>Aprueba el rol y toca <b>Subir a TimeBlock</b>: el rol se copia.</li><li>Cambia a la <b>pestaña de TimeBlock</b> (con tu sesión abierta) y toca ahí el favorito <b>Bot TimeBlock</b>. En esta página no funciona.</li><li>El bot lee el rol, encuentra a cada colaborador y aplica los cambios.</li></ol>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="primary" id="bUp2" disabled>Subir a TimeBlock</button><button type="button" id="bBot" disabled>Descargar archivo</button></div>
+          <div class="banner"><b>Instalar el bot · versión 7.</b> Si ya tenías un favorito Bot TimeBlock, bórralo primero. Arrastra este botón a la barra de favoritos: <a id="botLink" class="chip" style="text-decoration:none;color:var(--brand);border:1px solid var(--brand)" href="#">Bot TimeBlock</a> o toca <button type="button" id="bBotCopy" style="padding:2px 8px">Copiar código</button> y pégalo como dirección de un favorito nuevo. No instala nada en la computadora.</div>
+          <p class="hint" style="margin:0">El bot junta a quienes llevan el mismo cambio y lo aplica de una vez con los botones <b>Redefiniciones +</b> y <b>Justificantes +</b> de abajo a la izquierda. Empieza en <b>modo prueba</b>: llena cada panel y tú tocas Agregar. Si algo no le cuadra, se detiene y te dice qué hacer a mano.</p></div>
+      </div>
+      <div class="tbl-wrap"><table class="t"><thead><tr><th>Colaborador en TimeBlock</th><th>Área</th><th>Lo que se aplica</th></tr></thead><tbody id="tbBody"></tbody></table></div>
+      <div class="card" id="noTb"></div>
+    </div>
+  </section>
+
+  <section id="v-como" data-view hidden>
+    <div class="grid2">
+      <div class="card"><h2>Cómo se arma la propuesta</h2>
+        <ol class="rules">
+          <li>Parte del turno que cada persona tuvo la semana anterior en el Excel del rol.</li>
+          <li>Rota cada semana, como en el Excel. <b>Envase y Mantenimiento</b> rotan en 4 semanas: 3.º → 2.º → 1.º → agregado → 3.º. <b>Paletizadora, Granel y S-8</b> rotan en 3: 3.º → 2.º → 1.º → 3.º. El cambio entra después del descanso.</li>
+          <li>Si alguien ya entró a tercer turno el domingo, la semana siguiente sigue en tercero. Si toda la semana estuvo incapacitado, la propuesta sigue la incapacidad hasta que se cambie.</li>
+          <li><b>¿Quién trabaja el domingo?</b> Igual que en el Excel desde noviembre de 2025: en Envase, Paletizadora y Mantenimiento, quien entra a tercer turno la semana siguiente empieza su tercer turno el domingo y descansa antes: la mitad el sábado y la otra mitad el viernes, para que el sábado no se quede sin primer turno. Así el domingo queda cubierto (normalmente 2 de Envase y 2 de Paletizadora); los demás descansan el domingo. En Granel nadie trabaja el domingo, igual que en el Excel.</li>
+          <li>Si alguien estuvo de vacaciones o incapacidad, cuenta las semanas que pasaron y sigue la rotación como si hubiera estado.</li>
+          <li>Quien lleva 4 semanas o más en el mismo turno se toma como turno fijo (Kaizen, por ejemplo) y no rota.</li>
+          <li>Lo que ya está capturado en el Excel se respeta tal cual.</li>
+          <li>Alertas: un turno de Envase, Paletizadora o Granel sin nadie o por debajo de su mínimo; alguien sin descanso en la semana; o un cambio de turno que deja 8 horas o menos entre una jornada y otra.</li>
+        </ol></div>
+      <div class="card"><h2>Definiciones</h2>
+        <ol class="rules">
+          <li><b>A</b> = agregado.</li>
+          <li><b>TSL</b> = curso "Todos Somos Líderes"; se muestra como capacitación.</li>
+          <li>Gómez Magdaleno y José Magdaleno son la misma persona: quedó un solo renglón, en Envase.</li>
+          <li><b>Mínimos por turno</b>, sacados del Excel (lo que hubo en 9 de cada 10 días desde junio): Envase 3 · 2 · 2, Paletizadora 1 · 1 · 2, Granel 1 · 1 · 1 (T1 · T2 · T3).</li>
+          <li>Nombres de turno en TimeBlock: T02 y T03 siguen el formato de T01. Se confirman, junto con el catálogo de justificantes, al construir el bot.</li>
+        </ol>
+        <p class="hint" style="margin:0" id="fixedList"></p></div>
+    </div>
+  </section>
+</main>
+<div class="pop" id="pop" hidden role="dialog" aria-modal="false" aria-labelledby="popT"></div>
+<div class="toast" id="toast" hidden></div>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="js/datos.js"></script>
+<script src="js/bot.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
